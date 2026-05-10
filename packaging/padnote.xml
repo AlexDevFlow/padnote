@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <!--
+    File-association hints for padnote. Installed under
+    /usr/share/mime/packages/ via update-mime-database. We don't claim
+    ownership of every text MIME on the system; instead we add a few
+    language-specific extensions that the system DB sometimes misses,
+    so the .desktop file's MimeType list resolves correctly for
+    double-clicks in file managers.
+  -->
+
+  <!-- padnote User-Defined Language XML -->
+  <mime-type type="application/x-padnote-udl">
+    <comment>padnote User-Defined Language</comment>
+    <sub-class-of type="application/xml"/>
+    <glob pattern="*.udl.xml"/>
+    <glob pattern="userDefineLang*.xml"/>
+  </mime-type>
+
+  <!-- Common code extensions that some distros' shared-mime-info
+       packages don't recognise out of the box. Extending an existing
+       MIME with sub-class-of avoids stomping on the system definition. -->
+  <mime-type type="text/x-c++src">
+    <glob pattern="*.cxx"/>
+    <glob pattern="*.cc"/>
+    <glob pattern="*.hh"/>
+    <glob pattern="*.hxx"/>
+    <glob pattern="*.hpp"/>
+  </mime-type>
+
+  <mime-type type="text/x-makefile">
+    <glob pattern="GNUmakefile"/>
+    <glob pattern="*.mk"/>
+  </mime-type>
+
+  <mime-type type="text/x-cmake">
+    <comment>CMake source code</comment>
+    <sub-class-of type="text/plain"/>
+    <glob pattern="CMakeLists.txt"/>
+    <glob pattern="*.cmake"/>
+  </mime-type>
+</mime-info>

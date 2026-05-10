@@ -1,0 +1,5 @@
+padnote (1.0.0-1) noble; urgency=medium
+
+  * Initial Debian package for padnote-- 1.0.
+
+ -- padnote-- maintainers <noreply@example.com>  Sun, 10 May 2026 00:00:00 +0000

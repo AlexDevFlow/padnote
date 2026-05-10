@@ -1,0 +1,26 @@
+Source: padnote
+Section: editors
+Priority: optional
+Maintainer: padnote-- maintainers <noreply@example.com>
+Build-Depends: debhelper-compat (= 13),
+               cmake (>= 3.20),
+               qt6-base-dev,
+               qt6-5compat-dev,
+               libqt6printsupport6,
+               ninja-build,
+               libcups2-dev,
+               libdbus-1-dev,
+               libxkbcommon-dev,
+               libgl1-mesa-dev
+Standards-Version: 4.6.2
+Rules-Requires-Root: no
+
+Package: padnote
+Architecture: linux-any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Qt 6 Linux text editor with syntax highlighting
+ padnote-- is a Qt 6 text editor for Linux with multi-document tabs,
+ split view, find/replace with regex, find-in-files, function list,
+ document map, project panels, file browser, customisable themes,
+ and user-defined languages. Syntax highlighting via Scintilla and
+ Lexilla covers 80+ languages out of the box.

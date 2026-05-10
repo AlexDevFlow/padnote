@@ -1,0 +1,60 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="/">
+        <file alias="langs.model.xml">../langs.model.xml</file>
+        <file alias="stylers.model.xml">../stylers.model.xml</file>
+        <file alias="DarkModeDefault.xml">../../installer/themes/DarkModeDefault.xml</file>
+
+        <!-- Phase 7f — bundled themes from upstream's installer/themes/.
+             Loaded on demand; selectable from View -> Theme submenu. -->
+        <file alias="themes/Bespin.xml">../../installer/themes/Bespin.xml</file>
+        <file alias="themes/Black board.xml">../../installer/themes/Black board.xml</file>
+        <file alias="themes/Choco.xml">../../installer/themes/Choco.xml</file>
+        <file alias="themes/DansLeRuSH-Dark.xml">../../installer/themes/DansLeRuSH-Dark.xml</file>
+        <file alias="themes/Deep Black.xml">../../installer/themes/Deep Black.xml</file>
+        <file alias="themes/Hello Kitty.xml">../../installer/themes/Hello Kitty.xml</file>
+        <file alias="themes/HotFudgeSundae.xml">../../installer/themes/HotFudgeSundae.xml</file>
+        <file alias="themes/khaki.xml">../../installer/themes/khaki.xml</file>
+        <file alias="themes/Mono Industrial.xml">../../installer/themes/Mono Industrial.xml</file>
+        <file alias="themes/Monokai.xml">../../installer/themes/Monokai.xml</file>
+        <file alias="themes/MossyLawn.xml">../../installer/themes/MossyLawn.xml</file>
+        <file alias="themes/Navajo.xml">../../installer/themes/Navajo.xml</file>
+        <file alias="themes/Obsidian.xml">../../installer/themes/Obsidian.xml</file>
+        <file alias="themes/Plastic Code Wrap.xml">../../installer/themes/Plastic Code Wrap.xml</file>
+        <file alias="themes/Ruby Blue.xml">../../installer/themes/Ruby Blue.xml</file>
+        <file alias="themes/Solarized-light.xml">../../installer/themes/Solarized-light.xml</file>
+        <file alias="themes/Solarized.xml">../../installer/themes/Solarized.xml</file>
+        <file alias="themes/Twilight.xml">../../installer/themes/Twilight.xml</file>
+        <file alias="themes/Vibrant Ink.xml">../../installer/themes/Vibrant Ink.xml</file>
+        <file alias="themes/vim Dark Blue.xml">../../installer/themes/vim Dark Blue.xml</file>
+        <file alias="themes/Zenburn.xml">../../installer/themes/Zenburn.xml</file>
+
+        <!-- Phase 7d — curated subset of upstream's installer/nativeLang/.
+             Each XML maps menu IDs to localized strings; loaded by
+             Localization.cpp at startup, applied to top-level menus on
+             every Settings -> Language switch. ~1.2 MB embedded total.
+             Adding more languages: drop the file here and add a row to
+             kBundled[] in Localization.cpp. Sub-menu / dialog
+             translation is honest future work. -->
+        <file alias="nativeLang/english.xml">../../installer/nativeLang/english.xml</file>
+        <file alias="nativeLang/french.xml">../../installer/nativeLang/french.xml</file>
+        <file alias="nativeLang/german.xml">../../installer/nativeLang/german.xml</file>
+        <file alias="nativeLang/italian.xml">../../installer/nativeLang/italian.xml</file>
+        <file alias="nativeLang/spanish.xml">../../installer/nativeLang/spanish.xml</file>
+        <file alias="nativeLang/portuguese.xml">../../installer/nativeLang/portuguese.xml</file>
+        <file alias="nativeLang/japanese.xml">../../installer/nativeLang/japanese.xml</file>
+        <file alias="nativeLang/chineseSimplified.xml">../../installer/nativeLang/chineseSimplified.xml</file>
+        <file alias="nativeLang/russian.xml">../../installer/nativeLang/russian.xml</file>
+        <file alias="nativeLang/polish.xml">../../installer/nativeLang/polish.xml</file>
+
+        <!-- Phase 5J-polish — bundled upstream Function List parsers.
+             One <id>.xml per language internalName, mirroring upstream's
+             installer/functionList/<id>.xml format (Boost.Regex / PCRE2
+             patterns inside <classRange> / <function> blocks).
+             Languages without a bundled XML fall back to FunctionList.cpp's
+             curated regex path (Phase 3c.2 MVP). Adding more: drop the
+             upstream XML in PowerEditor/src/linux/functionList/ and add
+             a <file alias="functionList/<id>.xml"/> line below. -->
+        <file alias="functionList/python.xml">functionList/python.xml</file>
+    </qresource>
+</RCC>
