@@ -97,7 +97,7 @@ jobs:
         # QApplication needs a platform plugin even for --version, and
         # GitHub runners are headless. offscreen costs nothing here.
         QT_QPA_PLATFORM=offscreen ./build/padnote --version | tee /tmp/version.txt
-        grep -q "1.0.0" /tmp/version.txt
+        grep -Eq "padnote-- [0-9]+\.[0-9]+\.[0-9]+" /tmp/version.txt
 
     - name: Smoke test — offscreen 3-second launch
       run: |

@@ -3391,21 +3391,39 @@ void MainWindow::closeEvent(QCloseEvent* e)
         return;
     }
 
-    // Snapshot the session BEFORE prompting for unsaved changes. closeAllBuffers
-    // drops every Buffer, so by the time it returns there's nothing left to
-    // serialise.
+    // Snapshot the session BEFORE dropping buffers, so the next launch
+    // can reopen every file we currently have open.
     Session::save(m_panes[0], m_panes[1], rightPaneVisible(), m_activePane);
 
-    if (!closeAllBuffers()) {
-        e->ignore();
-        return;
+    // Hot exit: every dirty buffer (file-bound or Untitled) gets a
+    // backup snapshot persisted to ~/.config/.../backup/, then a
+    // `hot-exit-pending` marker is dropped. Next launch sees that
+    // marker and silently overlays the snapshots — matching VSCode's
+    // "Hot Exit" behaviour. No save prompt, no lost work.
+    for (int p = 0; p < 2; ++p) {
+        EditorTabs* pane = m_panes[p];
+        if (!pane) continue;
+        for (int i = 0; i < pane->bufferCount(); ++i) {
+            Buffer* b = pane->bufferAt(i);
+            if (b && b->isDirty()) Backup::writeBuffer(b);
+        }
     }
+    Backup::markHotExit();
 
-    // Phase 5AA — clean exit: every buffer that was open and either
-    // saved or discarded is now gone, so any backup snapshots from this
-    // session are obsolete. closeAllBuffers walked Buffer::saveToFile
-    // (which clears the backup) for kept buffers; sweep the rest here.
-    Backup::clearAll();
+    // Drop every buffer without prompting. Dirty content survives in
+    // the backup snapshots; saved-and-clean buffers had their backups
+    // cleared by Buffer::saveToFile.
+    for (int p = 0; p < 2; ++p) {
+        EditorTabs* pane = m_panes[p];
+        if (!pane) continue;
+        while (pane->bufferCount() > 0) {
+            pane->dropBufferAt(0);
+        }
+    }
+    // NB: deliberately NOT calling Backup::clearAll() here — that
+    // would wipe the snapshots we just wrote. clearAll runs on next
+    // launch after the overlay (or crash-recovery dismiss) consumes
+    // them.
     // Phase 10b — unload plugins on clean exit. dlclose runs each
     // plugin's destructors (if any); they get one last chance to
     // persist state.
@@ -5384,6 +5402,51 @@ Buffer* MainWindow::adoptCrashRecoveredBuffer(const QByteArray& utf8Bytes)
               utf8Bytes.constData());
     ed->send(static_cast<unsigned int>(Message::EmptyUndoBuffer));
     return b;
+}
+
+void MainWindow::applyHotExitOverlay(const QVector<Backup::Recovery>& recoveries)
+{
+    for (const auto& r : recoveries) {
+        QFile bak(r.backupPath);
+        if (!bak.open(QIODevice::ReadOnly)) continue;
+        const QByteArray bytes = bak.readAll();
+        bak.close();
+
+        // Try to bind to an already-open Buffer first (Session::restore
+        // typically reopened any file-bound buffer the user had).
+        Buffer* target = nullptr;
+        if (!r.originalPath.isEmpty()) {
+            for (int p = 0; p < 2 && !target; ++p) {
+                EditorTabs* pane = m_panes[p];
+                if (!pane) continue;
+                for (int i = 0; i < pane->bufferCount(); ++i) {
+                    Buffer* candidate = pane->bufferAt(i);
+                    if (candidate && candidate->filePath() == r.originalPath) {
+                        target = candidate;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (target) {
+            // Overlay the dirty snapshot onto the existing file-bound
+            // buffer. ClearAll + AddText replaces content; the absence
+            // of a SetSavePoint call keeps the modified flag set, so
+            // the tab shows as dirty.
+            auto* ed = target->editor();
+            ed->send(static_cast<unsigned int>(Message::ClearAll));
+            ed->sends(static_cast<unsigned int>(Message::AddText),
+                      static_cast<Scintilla::uptr_t>(bytes.size()),
+                      bytes.constData());
+            ed->send(static_cast<unsigned int>(Message::EmptyUndoBuffer));
+        } else {
+            // Either the recovery was an Untitled buffer (originalPath
+            // empty) or the file vanished from disk between sessions.
+            // Spawn a fresh Untitled tab carrying the content.
+            adoptCrashRecoveredBuffer(bytes);
+        }
+    }
 }
 
 // =============================================================================

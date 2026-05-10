@@ -31,6 +31,11 @@ QString indexFile()
     return backupDir() + QStringLiteral("/index.xml");
 }
 
+QString hotExitMarker()
+{
+    return backupDir() + QStringLiteral("/hot-exit-pending");
+}
+
 // Atomic write: .tmp + rename.
 bool writeAtomic(const QString& path, const QByteArray& bytes)
 {
@@ -202,10 +207,27 @@ void clearAll()
     QDir d(backupDir());
     if (!d.exists()) return;
     for (const QString& f : d.entryList(
-             QStringList() << QStringLiteral("*.bak") << QStringLiteral("index.xml"),
+             QStringList() << QStringLiteral("*.bak")
+                           << QStringLiteral("index.xml")
+                           << QStringLiteral("hot-exit-pending"),
              QDir::Files)) {
         d.remove(f);
     }
+}
+
+void markHotExit()
+{
+    init();
+    QFile f(hotExitMarker());
+    if (f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        f.write("1\n");
+        f.close();
+    }
+}
+
+bool isHotExitPending()
+{
+    return QFileInfo::exists(hotExitMarker());
 }
 
 } // namespace Backup

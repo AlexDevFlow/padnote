@@ -104,34 +104,6 @@ int main(int argc, char* argv[])
     MainWindow w;
     w.show();
 
-    // Phase 5AA — crash-recovery prompt. If the previous run left
-    // .bak files in the backup dir, offer to restore them as fresh
-    // Untitled tabs. Either choice (Yes / No) wipes the backup dir
-    // afterwards: recovered content is now live in the editor;
-    // declined content the user explicitly threw away. Phase 3d: the
-    // restore lands in the active pane via MainWindow's helper.
-    {
-        const auto recoveries = Backup::pendingRecoveries();
-        if (!recoveries.isEmpty()) {
-            const auto reply = QMessageBox::question(&w,
-                QObject::tr("Recover unsaved work"),
-                QObject::tr("%1 unsaved buffer(s) from the previous session "
-                            "were not cleanly closed. Recover them?")
-                    .arg(recoveries.size()),
-                QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
-            if (reply == QMessageBox::Yes) {
-                for (const auto& r : recoveries) {
-                    QFile bak(r.backupPath);
-                    if (!bak.open(QIODevice::ReadOnly)) continue;
-                    const QByteArray bytes = bak.readAll();
-                    bak.close();
-                    w.adoptCrashRecoveredBuffer(bytes);
-                }
-            }
-            Backup::clearAll();
-        }
-    }
-
     // Register on the session bus AFTER the window is up so the openFiles
     // slot sees a fully-constructed MainWindow on its first call. Failure
     // here (no D-Bus, name collision in a race) is non-fatal — we just
@@ -145,10 +117,10 @@ int main(int argc, char* argv[])
     // them and ignore the saved session entirely. Otherwise, restore the
     // last session if one exists.
     //
-    // Phase 3d: session restore round-trips both panes; the initial Untitled
-    // (created by the MainWindow ctor in the LEFT pane) is dropped when the
-    // restore added at least one real file. The right pane is shown only if
-    // the saved splitVisible attribute was true.
+    // Session restore round-trips both panes; the initial Untitled
+    // (created by the MainWindow ctor in the LEFT pane) is dropped when
+    // the restore added at least one real file. The right pane is shown
+    // only if the saved splitVisible attribute was true.
     auto dropInitialUntitledIfReplaced = [&](int restored) {
         if (restored <= 0) return;
         EditorTabs* L = w.leftPane();
@@ -169,9 +141,43 @@ int main(int argc, char* argv[])
                                               &wasSplit, &activeView);
         dropInitialUntitledIfReplaced(restored);
         if (wasSplit) w.setSplitVisible(true);
-        // m_activePane defaults to 0 (left) — saved activeView is informational
-        // for now; the user's first click sets it via focus tracking.
+        // m_activePane defaults to 0 (left) — saved activeView is
+        // informational for now; the user's first click sets it via
+        // focus tracking.
         (void)activeView;
+    }
+
+    // Backup recovery runs AFTER session restore so the hot-exit
+    // overlay can match recoveries against the just-reopened buffers.
+    //
+    // Hot-exit pending  → silent overlay; no prompt, dirty buffers
+    //                     come back exactly as they were left.
+    // No hot-exit marker but recoveries present → previous run
+    //                     crashed; show the recover-or-discard prompt.
+    {
+        const auto recoveries = Backup::pendingRecoveries();
+        if (!recoveries.isEmpty()) {
+            if (Backup::isHotExitPending()) {
+                w.applyHotExitOverlay(recoveries);
+            } else {
+                const auto reply = QMessageBox::question(&w,
+                    QObject::tr("Recover unsaved work"),
+                    QObject::tr("%1 unsaved buffer(s) from the previous session "
+                                "were not cleanly closed. Recover them?")
+                        .arg(recoveries.size()),
+                    QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+                if (reply == QMessageBox::Yes) {
+                    for (const auto& r : recoveries) {
+                        QFile bak(r.backupPath);
+                        if (!bak.open(QIODevice::ReadOnly)) continue;
+                        const QByteArray bytes = bak.readAll();
+                        bak.close();
+                        w.adoptCrashRecoveredBuffer(bytes);
+                    }
+                }
+            }
+            Backup::clearAll();
+        }
     }
 
     return app.exec();

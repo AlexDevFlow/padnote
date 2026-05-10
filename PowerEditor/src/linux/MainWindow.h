@@ -17,6 +17,7 @@
 #include <utility>
 #include <vector>
 
+#include "Backup.h"
 #include "Encoding.h"
 
 class Buffer;
@@ -56,9 +57,17 @@ public:
     // number of files actually opened (zero-length list returns 0).
     int openFilesInActivePane(const QStringList& files);
 
-    // Phase 3d — adopt a fresh Untitled buffer with the given UTF-8 bytes
-    // into the active pane. Used by the crash-recovery path in main_qt.cpp.
+    // Adopt a fresh Untitled buffer with the given UTF-8 bytes into the
+    // active pane. Used by the crash-recovery path in main_qt.cpp.
     Buffer* adoptCrashRecoveredBuffer(const QByteArray& utf8Bytes);
+
+    // Hot-exit restore. For each recovery whose `originalPath` matches
+    // an already-open Buffer (Session::restore reopened the file), the
+    // backup content overlays that buffer and the buffer is left in
+    // the dirty state. For Untitled buffers (no path) and recoveries
+    // whose path no longer matches any open buffer, a new tab is
+    // created in the active pane and marked dirty.
+    void applyHotExitOverlay(const QVector<Backup::Recovery>& recoveries);
 
     // Phase 3d — show or hide the right pane. Used by main_qt.cpp's session
     // restore to reapply the saved splitVisible state.

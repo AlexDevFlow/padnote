@@ -9,7 +9,7 @@
 cmake_minimum_required(VERSION 3.20)
 
 project(padnote
-    VERSION 1.0.0
+    VERSION 1.0.1
     DESCRIPTION "padnote-- — Qt 6 Linux text editor"
     HOMEPAGE_URL ""
     LANGUAGES C CXX
