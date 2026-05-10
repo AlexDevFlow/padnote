@@ -1,0 +1,42 @@
+padnote-- for Debian / Ubuntu
+==================================
+
+Building the package
+--------------------
+
+The build host needs:
+
+    sudo apt install debhelper-compat cmake ninja-build \
+                     qt6-base-dev qt6-5compat-dev libqt6printsupport6 \
+                     libcups2-dev libdbus-1-dev libxkbcommon-dev \
+                     libgl1-mesa-dev devscripts lintian
+
+From the repository root:
+
+    dpkg-buildpackage -us -uc -b
+
+Produces `padnote_1.0.0-1_amd64.deb` in the parent directory. Run
+`lintian` against it to check for policy violations:
+
+    lintian ../padnote_1.0.0-1_amd64.deb
+
+Installing the package
+----------------------
+
+    sudo dpkg -i ../padnote_1.0.0-1_amd64.deb
+    sudo apt install -f   # if dpkg complains about dependencies
+
+Removing
+--------
+
+    sudo apt remove padnote
+
+Notes
+-----
+
+* The .desktop file registers the editor with text/* and source-code
+  MIME types. Open files via the file manager's "Open With" menu or
+  run `padnote <file>` from a terminal.
+* Config lives at `~/.config/padnote/padnote--/` (Qt's
+  QStandardPaths::AppConfigLocation lookup with both organizationName
+  and applicationName set).

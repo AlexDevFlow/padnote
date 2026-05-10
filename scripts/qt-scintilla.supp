@@ -1,0 +1,57 @@
+# valgrind suppressions for known-clean Qt + Scintilla noise.
+#
+# Each entry mutes leak/condition reports we've classified as benign:
+# Qt's internal singletons, font caches, scintilla lexer state caches,
+# etc. New entries should include a comment explaining WHY the noise is
+# benign (singleton / freed-at-exit / library-internal cache / etc.).
+
+# --- Qt6Core (singletons + font caches) -------------------------------
+{
+   Qt6Core_QObject_static_meta_object
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:_ZN7QObject16staticMetaObjectE
+}
+{
+   Qt6Gui_QFontDatabase_initializer
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:*QFontDatabase*
+}
+{
+   Qt6Gui_QStandardItemModel_class_init
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:*QStandardItemModel*staticMetaObject*
+}
+
+# --- Scintilla (lexer state caches retained until process exit) -------
+{
+   Scintilla_Lexilla_lexer_module_static
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:*Lexilla*LexerModule*
+}
+{
+   Scintilla_PerLine_marker_caches
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:*Scintilla*PerLine*
+}
+
+# --- glibc / libc internal init (NSS, malloc arenas) -----------------
+{
+   glibc_dlopen_init
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:_dl_init
+}
+
+# Add new entries below as noise re-emerges. Format reference:
+# https://valgrind.org/docs/manual/manual-core.html#manual-core.suppress

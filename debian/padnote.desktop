@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=padnote--
+GenericName=Text Editor
+Comment=Qt 6 Linux text editor with syntax highlighting and split-view tabs
+Exec=padnote %F
+Icon=padnote
+Terminal=false
+Categories=Development;TextEditor;
+MimeType=text/plain;text/x-c;text/x-c++;text/x-python;text/x-java;text/x-sh;text/x-csrc;text/x-chdr;text/x-c++src;text/x-c++hdr;text/x-makefile;text/css;text/html;text/x-xml;application/json;application/javascript;
+StartupNotify=true
+Keywords=text;editor;code;source;syntax;

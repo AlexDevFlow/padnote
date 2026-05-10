@@ -1,0 +1,158 @@
+# padnote-- — CI build & smoke test
+#
+# Builds the Qt 6 / CMake project on a small Ubuntu matrix, runs a
+# minimal smoke test (--version + 3-second offscreen launch), and on
+# tagged releases packages an AppImage and uploads it as an artifact.
+#
+# Local equivalents:
+#   cmake -B build -S .
+#   cmake --build build -j$(nproc)
+#   ./build/padnote --version
+#   QT_QPA_PLATFORM=offscreen timeout 3 ./build/padnote README.md
+
+name: Build
+
+on:
+  push:
+    branches: [main, linux-port]
+    tags: ['v*']
+  pull_request:
+    branches: [main, linux-port]
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CMAKE_BUILD_PARALLEL_LEVEL: 4
+  CCACHE_DIR: ${{ github.workspace }}/.ccache
+  CCACHE_MAXSIZE: 500M
+
+jobs:
+  build:
+    name: Build & smoke (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04]
+
+    steps:
+    - name: Checkout source
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+          build-essential \
+          ccache \
+          cmake \
+          ninja-build \
+          qt6-base-dev \
+          qt6-base-private-dev \
+          qt6-tools-dev \
+          qt6-5compat-dev \
+          libcups2-dev \
+          libdbus-1-dev \
+          libxkbcommon-dev \
+          libgl1-mesa-dev
+        cmake --version
+        qmake6 -query QT_VERSION || true
+        ccache --version | head -1
+
+    - name: Restore ccache
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.CCACHE_DIR }}
+        key: ccache-${{ matrix.runner }}-${{ hashFiles('CMakeLists.txt', 'PowerEditor/src/linux/CMakeLists.txt', 'scintilla/**', 'lexilla/**', 'boostregex/**') }}
+        restore-keys: |
+          ccache-${{ matrix.runner }}-
+
+    - name: Configure ccache
+      run: |
+        mkdir -p "$CCACHE_DIR"
+        ccache -M "$CCACHE_MAXSIZE"
+        ccache -z
+
+    - name: Configure CMake
+      run: |
+        cmake -B build -S . \
+          -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+
+    - name: Build
+      run: cmake --build build --parallel
+
+    - name: Print ccache stats
+      run: ccache -s
+
+    - name: Smoke test — version
+      run: |
+        # QApplication needs a platform plugin even for --version, and
+        # GitHub runners are headless. offscreen costs nothing here.
+        QT_QPA_PLATFORM=offscreen ./build/padnote --version | tee /tmp/version.txt
+        grep -q "1.0.0" /tmp/version.txt
+
+    - name: Smoke test — offscreen 3-second launch
+      run: |
+        # `set -e` (GitHub Actions default) kills the step the moment
+        # `timeout` exits non-zero, before we get to inspect the
+        # status. `|| true` keeps the step alive long enough to make
+        # the 124-or-0 success decision explicitly.
+        status=0
+        QT_QPA_PLATFORM=offscreen timeout 3 ./build/padnote \
+            --new-instance README.md \
+            > /tmp/run.out 2>&1 || status=$?
+        if [ "$status" != "124" ] && [ "$status" != "0" ]; then
+          echo "Offscreen launch failed with status $status"
+          grep -v "propagateSizeHints" /tmp/run.out || true
+          exit 1
+        fi
+        echo "Offscreen launch clean (exit $status)"
+
+    # ---- Tagged-release artifacts --------------------------------------
+    - name: Install AppImage tooling
+      if: startsWith(github.ref, 'refs/tags/v') && matrix.runner == 'ubuntu-24.04'
+      run: |
+        sudo apt-get install -y --no-install-recommends \
+          file \
+          desktop-file-utils \
+          libfuse2
+
+    - name: Build AppImage
+      if: startsWith(github.ref, 'refs/tags/v') && matrix.runner == 'ubuntu-24.04'
+      run: |
+        QMAKE=$(command -v qmake6) ./packaging/build-appimage.sh
+        OUT=./build/padnote-x86_64.AppImage
+        ls -lh "$OUT"
+        chmod +x "$OUT"
+        # Sanity: produced file is a real ELF AppImage. We don't run
+        # the AppImage here — linuxdeploy-plugin-qt bundles only the
+        # platforms the binary linked against (xcb), and the CI runner
+        # has no display. Runtime smoke happens on the download side.
+        file "$OUT" | grep -q "ELF 64-bit"
+        echo "AppImage built: $OUT ($(stat -c %s "$OUT") bytes)"
+
+    - name: Upload tagged-release binary
+      if: startsWith(github.ref, 'refs/tags/v') && matrix.runner == 'ubuntu-24.04'
+      uses: actions/upload-artifact@v4
+      with:
+        name: padnote-${{ github.ref_name }}-${{ matrix.runner }}
+        path: build/padnote
+        if-no-files-found: error
+        retention-days: 90
+
+    - name: Upload tagged-release AppImage
+      if: startsWith(github.ref, 'refs/tags/v') && matrix.runner == 'ubuntu-24.04'
+      uses: actions/upload-artifact@v4
+      with:
+        name: padnote-${{ github.ref_name }}-AppImage
+        path: build/padnote-x86_64.AppImage
+        if-no-files-found: error
+        retention-days: 90

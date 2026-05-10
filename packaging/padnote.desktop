@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=padnote--
+GenericName=Text Editor
+Comment=Qt 6 Linux text editor
+Icon=padnote
+Exec=padnote %F
+Terminal=false
+StartupNotify=true
+StartupWMClass=padnote--
+Categories=Utility;TextEditor;Development;
+Keywords=Text;Editor;Code;Programming;Plaintext;Source;
+MimeType=text/plain;text/x-c;text/x-c++;text/x-csharp;text/x-java;text/x-python;text/x-perl;text/x-php;text/x-ruby;text/x-shellscript;text/x-makefile;text/x-cmake;text/x-tex;text/html;text/xml;text/css;text/javascript;text/markdown;application/json;application/xml;application/x-yaml;application/x-shellscript;application/x-perl;application/x-python;application/x-ruby;

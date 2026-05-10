@@ -1,0 +1,18 @@
+#!/usr/bin/make -f
+# debian/rules for padnote.
+#
+# Uses dh's CMake builder (debhelper-compat 13). Override
+# dh_auto_configure to pass our minimum-required flags + a Release
+# build.
+
+export DH_VERBOSE = 1
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+%:
+	dh $@ --buildsystem=cmake
+
+override_dh_auto_configure:
+	dh_auto_configure -- \
+	    -DCMAKE_BUILD_TYPE=Release \
+	    -GNinja
