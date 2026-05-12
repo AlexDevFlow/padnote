@@ -56,6 +56,7 @@ public:
 
     void setFilePath(const QString& path);
     void setUntitledIndex(int n) { m_untitledIndex = n; }
+    int  untitledIndex() const   { return m_untitledIndex; }
 
     // Attach a Lexilla lexer + apply theme for the language. Pass nullptr
     // (or the "text" entry) for plain text. Re-styles the whole buffer.

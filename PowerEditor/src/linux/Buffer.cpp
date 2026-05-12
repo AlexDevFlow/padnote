@@ -961,9 +961,24 @@ void Buffer::onCharAdded(int ch)
         case '{': closer = QChar('}'); break;
         case '"': closer = QChar('"'); break;
         case '\'': closer = QChar('\''); break;
+        case '`': closer = QChar('`'); break;
         // Non-bracket char (including identifier chars): fall through to
         // the autocomplete auto-trigger check before exiting.
         default:  maybeTriggerAutocomplete(); return;
+    }
+
+    // VSCode-style apostrophe heuristic: when the previous char is a
+    // letter or digit, treat `'` as an apostrophe in prose (don't,
+    // it's, l'amour) rather than the opener of a quoted string. Skip
+    // the auto-pair. Doesn't fire for `"` because closing a paragraph
+    // mid-word is far more common than typing the same letter twice
+    // around quotes.
+    if (ch == '\'' && pos > 0) {
+        const char prevCh = static_cast<char>(
+            m_editor->send(static_cast<unsigned int>(Message::GetCharAt),
+                           static_cast<Scintilla::uptr_t>(pos - 1)));
+        const QChar qp(prevCh);
+        if (qp.isLetterOrNumber()) return;
     }
 
     // Don't auto-pair if the very next char is already the same closer

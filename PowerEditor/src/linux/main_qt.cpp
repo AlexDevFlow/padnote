@@ -141,10 +141,10 @@ int main(int argc, char* argv[])
                                               &wasSplit, &activeView);
         dropInitialUntitledIfReplaced(restored);
         if (wasSplit) w.setSplitVisible(true);
-        // m_activePane defaults to 0 (left) — saved activeView is
-        // informational for now; the user's first click sets it via
-        // focus tracking.
-        (void)activeView;
+        // Restore which pane had focus. setActivePane is a no-op if
+        // the right pane is hidden, so this is safe regardless of
+        // wasSplit.
+        if (activeView == 1) w.setActivePane(1);
     }
 
     // Backup recovery runs AFTER session restore so the hot-exit

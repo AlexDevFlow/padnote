@@ -135,6 +135,22 @@ Buffer* EditorTabs::newUntitled()
     return buffer;
 }
 
+Buffer* EditorTabs::restoreUntitled(int index)
+{
+    auto* buffer = new Buffer(this);
+    buffer->setUntitledIndex(index);
+    if (index >= m_nextUntitledIndex) m_nextUntitledIndex = index + 1;
+
+    ScintillaEditBase* editor = buffer->editor();
+    editor->setProperty("buffer", QVariant::fromValue<Buffer*>(buffer));
+
+    wireBufferSignals(buffer);
+
+    const int idx = addTab(editor, buffer->displayName());
+    setCurrentIndex(idx);
+    return buffer;
+}
+
 Buffer* EditorTabs::openFile(const QString& path)
 {
     const QString canonical = QFileInfo(path).canonicalFilePath();

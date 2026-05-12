@@ -109,7 +109,9 @@ jobs:
         QT_QPA_PLATFORM=offscreen timeout 3 ./build/padnote \
             --new-instance README.md \
             > /tmp/run.out 2>&1 || status=$?
-        if [ "$status" != "124" ] && [ "$status" != "0" ]; then
+        # Accepted: 0 (clean exit), 124 (timeout sent SIGTERM, coalesced),
+        # 143 (timeout sent SIGTERM, child reported 128+15 verbatim).
+        if [ "$status" != "124" ] && [ "$status" != "0" ] && [ "$status" != "143" ]; then
           echo "Offscreen launch failed with status $status"
           grep -v "propagateSizeHints" /tmp/run.out || true
           exit 1

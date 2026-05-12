@@ -5412,16 +5412,24 @@ void MainWindow::applyHotExitOverlay(const QVector<Backup::Recovery>& recoveries
         const QByteArray bytes = bak.readAll();
         bak.close();
 
-        // Try to bind to an already-open Buffer first (Session::restore
-        // typically reopened any file-bound buffer the user had).
+        // Find the buffer Session::restore already created at the right
+        // tab position. File-bound buffers match by filePath; Untitled
+        // buffers match by untitledIndex (locale-independent).
         Buffer* target = nullptr;
-        if (!r.originalPath.isEmpty()) {
-            for (int p = 0; p < 2 && !target; ++p) {
-                EditorTabs* pane = m_panes[p];
-                if (!pane) continue;
-                for (int i = 0; i < pane->bufferCount(); ++i) {
-                    Buffer* candidate = pane->bufferAt(i);
-                    if (candidate && candidate->filePath() == r.originalPath) {
+        for (int p = 0; p < 2 && !target; ++p) {
+            EditorTabs* pane = m_panes[p];
+            if (!pane) continue;
+            for (int i = 0; i < pane->bufferCount(); ++i) {
+                Buffer* candidate = pane->bufferAt(i);
+                if (!candidate) continue;
+                if (!r.originalPath.isEmpty()) {
+                    if (candidate->filePath() == r.originalPath) {
+                        target = candidate;
+                        break;
+                    }
+                } else if (r.untitledIndex > 0) {
+                    if (!candidate->hasFile()
+                        && candidate->untitledIndex() == r.untitledIndex) {
                         target = candidate;
                         break;
                     }
@@ -5430,10 +5438,10 @@ void MainWindow::applyHotExitOverlay(const QVector<Backup::Recovery>& recoveries
         }
 
         if (target) {
-            // Overlay the dirty snapshot onto the existing file-bound
-            // buffer. ClearAll + AddText replaces content; the absence
-            // of a SetSavePoint call keeps the modified flag set, so
-            // the tab shows as dirty.
+            // Overlay the dirty snapshot onto the placeholder buffer.
+            // ClearAll + AddText replaces content; the deliberate
+            // absence of a SetSavePoint call keeps the modified flag
+            // set, so the tab shows as dirty.
             auto* ed = target->editor();
             ed->send(static_cast<unsigned int>(Message::ClearAll));
             ed->sends(static_cast<unsigned int>(Message::AddText),
@@ -5441,9 +5449,9 @@ void MainWindow::applyHotExitOverlay(const QVector<Backup::Recovery>& recoveries
                       bytes.constData());
             ed->send(static_cast<unsigned int>(Message::EmptyUndoBuffer));
         } else {
-            // Either the recovery was an Untitled buffer (originalPath
-            // empty) or the file vanished from disk between sessions.
-            // Spawn a fresh Untitled tab carrying the content.
+            // Defensive fallback: no matching tab (file vanished from
+            // disk, or session/backup got out of sync). Spawn a fresh
+            // Untitled tab carrying the snapshot so the work isn't lost.
             adoptCrashRecoveredBuffer(bytes);
         }
     }

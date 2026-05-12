@@ -28,9 +28,11 @@ QString sessionFile()
     return fi.absolutePath() + QStringLiteral("/session.xml");
 }
 
-// Open every <File> child of `parent` into `pane`. Restores the per-pane
-// activeIndex relative to the buffers actually opened (untitled / missing
-// files are skipped, so the saved index needs to be remapped).
+// Open every <File> child of `parent` into `pane`, preserving tab order.
+// File-bound entries call openFile(); Untitled entries (untitled="N"
+// attribute) call restoreUntitled(N) and leave the editor empty — the
+// hot-exit overlay in main_qt.cpp fills in dirty content when a matching
+// snapshot exists. Per-buffer zoom (zoom="N") is applied after creation.
 int restorePane(EditorTabs* pane, const pugi::xml_node& parent)
 {
     if (!pane) return 0;
@@ -38,12 +40,18 @@ int restorePane(EditorTabs* pane, const pugi::xml_node& parent)
     const int firstNewIndex = pane->bufferCount();   // before any restored opens
     int opened = 0;
     for (pugi::xml_node node : parent.children("File")) {
-        const char* fn = node.attribute("filename").value();
-        if (!fn || !*fn) continue;
-        const QString path = QString::fromUtf8(fn);
-        if (!QFileInfo::exists(path)) continue;
+        Buffer* b = nullptr;
 
-        Buffer* b = pane->openFile(path);
+        const int untitled = node.attribute("untitled").as_int(0);
+        if (untitled > 0) {
+            b = pane->restoreUntitled(untitled);
+        } else {
+            const char* fn = node.attribute("filename").value();
+            if (!fn || !*fn) continue;
+            const QString path = QString::fromUtf8(fn);
+            if (!QFileInfo::exists(path)) continue;
+            b = pane->openFile(path);
+        }
         if (!b) continue;
 
         const long long pos = node.attribute("position").as_llong(0);
@@ -51,6 +59,12 @@ int restorePane(EditorTabs* pane, const pugi::xml_node& parent)
             b->editor()->send(static_cast<unsigned int>(Message::GotoPos),
                               static_cast<Scintilla::uptr_t>(pos), 0);
             b->editor()->send(static_cast<unsigned int>(Message::ScrollCaret));
+        }
+
+        const int zoom = node.attribute("zoom").as_int(0);
+        if (zoom != 0) {
+            b->editor()->send(static_cast<unsigned int>(Message::SetZoom),
+                              static_cast<Scintilla::uptr_t>(zoom), 0);
         }
         ++opened;
     }
@@ -63,32 +77,43 @@ int restorePane(EditorTabs* pane, const pugi::xml_node& parent)
     return opened;
 }
 
-// Walk every Buffer with a file path on disk in `pane` and append a <File>
-// child to `paneNode`. Returns the active index relative to the saved
-// buffers (skipping Untitled).
+// Walk every Buffer in `pane` (file-bound AND Untitled) and append a
+// <File> child to `paneNode`. Tab order is preserved; Untitled buffers
+// get an `untitled="N"` attribute so hot-exit overlay can bind their
+// .bak snapshots back to the right placeholder. Zoom and caret
+// position are recorded per buffer.
 int writePane(EditorTabs* pane, pugi::xml_node& paneNode)
 {
     if (!pane) return 0;
 
     const int currentIdx = pane->currentIndex();
-    int savedActiveIndex = 0;
     int savedSoFar = 0;
+    int savedActiveIndex = 0;
 
     for (int i = 0; i < pane->bufferCount(); ++i) {
         Buffer* b = pane->bufferAt(i);
-        if (!b || !b->hasFile()) continue;
-        const QString path = QFileInfo(b->filePath()).absoluteFilePath();
-        if (path.isEmpty()) continue;
-
-        if (i == currentIdx) savedActiveIndex = savedSoFar;
-        ++savedSoFar;
+        if (!b) continue;
 
         pugi::xml_node file = paneNode.append_child("File");
-        const QByteArray utf8 = path.toUtf8();
-        file.append_attribute("filename") = utf8.constData();
+        if (b->hasFile()) {
+            const QString path = QFileInfo(b->filePath()).absoluteFilePath();
+            if (path.isEmpty()) { paneNode.remove_child(file); continue; }
+            const QByteArray utf8 = path.toUtf8();
+            file.append_attribute("filename") = utf8.constData();
+        } else {
+            file.append_attribute("untitled") = b->untitledIndex();
+        }
+
         const Scintilla::sptr_t pos =
             b->editor()->send(static_cast<unsigned int>(Message::GetCurrentPos));
         file.append_attribute("position") = static_cast<long long>(pos);
+
+        const Scintilla::sptr_t zoom =
+            b->editor()->send(static_cast<unsigned int>(Message::GetZoom));
+        file.append_attribute("zoom") = static_cast<int>(zoom);
+
+        if (i == currentIdx) savedActiveIndex = savedSoFar;
+        ++savedSoFar;
     }
 
     paneNode.append_attribute("activeIndex") = savedActiveIndex;

@@ -69,6 +69,13 @@ public:
     // created in the active pane and marked dirty.
     void applyHotExitOverlay(const QVector<Backup::Recovery>& recoveries);
 
+    // Set the active pane. Idempotent. Drives status bar / menu radio
+    // refresh from the new active pane's current buffer. Index 0 =
+    // left, 1 = right. Setting active to a hidden right pane is
+    // silently ignored. Public so main_qt.cpp can restore the
+    // last-active pane after session restore.
+    void setActivePane(int idx);
+
     // Phase 3d — show or hide the right pane. Used by main_qt.cpp's session
     // restore to reapply the saved splitVisible state.
     void setSplitVisible(bool on);
@@ -338,11 +345,6 @@ private:
     void applyBackupPrefsFromConfig();  // Phase 5N.11 — backup timer interval + master enable
     void applyFileWatcherPrefsFromConfig(); // Phase 5N.11 — watcher enable / disable
 
-    // Phase 3d — set the active pane. Idempotent. Drives status bar / menu
-    // radio refresh from the new active pane's current buffer. Index 0 = left,
-    // 1 = right. Setting active to a hidden right pane is silently ignored
-    // (the user can't focus a hidden widget anyway).
-    void setActivePane(int idx);
     int  paneIndexOf(EditorTabs* pane) const;
     void showSplitPane(bool on);   // toggles right-pane visibility
 

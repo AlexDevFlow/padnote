@@ -265,6 +265,22 @@ void doInit()
         g_registry.push_back(std::move(d));
     }
 
+    // Markdown is in the hardcode display/lexer map but absent from
+    // langs.model.xml (upstream tracks it via a different code path).
+    // Add it manually so .md / .markdown auto-detect and the language
+    // picker shows the entry.
+    if (std::none_of(g_registry.begin(), g_registry.end(),
+                     [](const LanguageDef& d){
+                         return d.internalName == "markdown";
+                     })) {
+        LanguageDef d;
+        d.internalName = "markdown";
+        d.displayName  = QStringLiteral("Markdown");
+        d.lexilla      = "markdown";
+        d.extensions   = "md markdown mdown mkd";
+        g_registry.push_back(std::move(d));
+    }
+
     g_initialised = true;
 }
 

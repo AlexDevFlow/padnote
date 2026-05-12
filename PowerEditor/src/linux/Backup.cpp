@@ -52,6 +52,7 @@ struct IndexEntry {
     QString uuid;
     QString displayName;
     QString originalPath;
+    int     untitledIndex = 0;
 };
 
 QVector<IndexEntry> readIndex()
@@ -70,9 +71,10 @@ QVector<IndexEntry> readIndex()
     const pugi::xml_node bks  = root.child("Backups");
     for (pugi::xml_node n : bks.children("Backup")) {
         IndexEntry e;
-        e.uuid         = QString::fromUtf8(n.attribute("uuid").value());
-        e.displayName  = QString::fromUtf8(n.attribute("displayName").value());
-        e.originalPath = QString::fromUtf8(n.attribute("filePath").value());
+        e.uuid           = QString::fromUtf8(n.attribute("uuid").value());
+        e.displayName    = QString::fromUtf8(n.attribute("displayName").value());
+        e.originalPath   = QString::fromUtf8(n.attribute("filePath").value());
+        e.untitledIndex  = n.attribute("untitledIndex").as_int(0);
         if (!e.uuid.isEmpty()) out.append(e);
     }
     return out;
@@ -91,9 +93,10 @@ bool writeIndex(const QVector<IndexEntry>& entries)
         const QByteArray u = e.uuid.toUtf8();
         const QByteArray d = e.displayName.toUtf8();
         const QByteArray p = e.originalPath.toUtf8();
-        n.append_attribute("uuid")        = u.constData();
-        n.append_attribute("displayName") = d.constData();
-        n.append_attribute("filePath")    = p.constData();
+        n.append_attribute("uuid")          = u.constData();
+        n.append_attribute("displayName")   = d.constData();
+        n.append_attribute("filePath")      = p.constData();
+        n.append_attribute("untitledIndex") = e.untitledIndex;
     }
     struct W : pugi::xml_writer {
         QByteArray bytes;
@@ -153,17 +156,19 @@ void writeBuffer(Buffer* b)
     bool found = false;
     for (auto& e : idx) {
         if (e.uuid == uuid) {
-            e.displayName  = b->displayName();
-            e.originalPath = b->hasFile() ? b->filePath() : QString{};
+            e.displayName    = b->displayName();
+            e.originalPath   = b->hasFile() ? b->filePath() : QString{};
+            e.untitledIndex  = b->hasFile() ? 0 : b->untitledIndex();
             found = true;
             break;
         }
     }
     if (!found) {
         IndexEntry e;
-        e.uuid         = uuid;
-        e.displayName  = b->displayName();
-        e.originalPath = b->hasFile() ? b->filePath() : QString{};
+        e.uuid           = uuid;
+        e.displayName    = b->displayName();
+        e.originalPath   = b->hasFile() ? b->filePath() : QString{};
+        e.untitledIndex  = b->hasFile() ? 0 : b->untitledIndex();
         idx.append(e);
     }
     writeIndex(idx);
@@ -193,10 +198,11 @@ QVector<Recovery> pendingRecoveries()
         const QString p = bakPathFor(e.uuid);
         if (!QFileInfo::exists(p)) continue;
         Recovery r;
-        r.uuid         = e.uuid;
-        r.displayName  = e.displayName;
-        r.originalPath = e.originalPath;
-        r.backupPath   = p;
+        r.uuid           = e.uuid;
+        r.displayName    = e.displayName;
+        r.originalPath   = e.originalPath;
+        r.backupPath     = p;
+        r.untitledIndex  = e.untitledIndex;
         out.append(r);
     }
     return out;

@@ -31,6 +31,10 @@ public:
     int     indexOfBuffer(Buffer* buffer) const;
 
     Buffer* newUntitled();                          // creates and shows a fresh buffer
+    // Like newUntitled but stamps the buffer with a specific untitled
+    // index (e.g. restored from session.xml). Bumps the internal
+    // counter past `index` so future newUntitled() calls don't collide.
+    Buffer* restoreUntitled(int index);
     Buffer* openFile(const QString& path);          // opens or focuses existing
     void    dropBufferAt(int index);                // unconditional close (no prompt)
     void    moveTab(int from, int to);              // exposes QTabBar::moveTab (Phase 5i)

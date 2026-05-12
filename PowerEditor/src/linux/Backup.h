@@ -34,6 +34,11 @@ struct Recovery {
     QString displayName;     // shown to the user in the recovery prompt
     QString originalPath;    // empty for untitled buffers
     QString backupPath;      // absolute path to the .bak file
+    int     untitledIndex;   // 0 for file-bound; the Buffer's untitled
+                             // index (N in "Untitled N") otherwise.
+                             // Used by hot-exit overlay to bind a .bak
+                             // back to the right tab when Session
+                             // restored the Untitled placeholders.
 };
 
 // Idempotent setup; ensures the backup dir exists.
